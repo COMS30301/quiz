@@ -969,7 +969,7 @@ if __name__ == '__main__':
             f_names = archive.getnames()
             struct = [x.split("/")[0] for x in f_names if x.count("/") > 0]
             # print "tar"
-            if "1to1" in struct and "img" in struct and os.path.basename(archive_path)[:-7]+".quiz" in f_names:
+            if "1to1" in struct and os.path.basename(archive_path)[:-7]+".quiz" in f_names:
                 return True
             else:
                 print "Incorrect archive structure:", archive_path
@@ -978,7 +978,7 @@ if __name__ == '__main__':
             f_names = f.namelist()
             struct = [x.split("/")[0] for x in f_names if x.count("/") > 0]
             # print "zip"
-            if "1to1" in struct and "img" in struct and os.path.basename(archive_path)[:-4]+".quiz" in f_names:
+            if "1to1" in struct and os.path.basename(archive_path)[:-4]+".quiz" in f_names:
                 return True
             else:
                 print "Incorrect archive structure:", archive_path
@@ -986,7 +986,7 @@ if __name__ == '__main__':
         elif archive_type == "folder":
             struct = os.listdir(archive)
             # print "folder"
-            if "1to1" in struct and "img" in struct and os.path.basename(archive_path)[:-4]+".quiz" in struct:
+            if "1to1" in struct and os.path.basename(archive_path)[:-4]+".quiz" in struct:
                 return True
             else:
                 print "Incorrect archive structure:", archive_path
