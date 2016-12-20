@@ -3,10 +3,13 @@
 # Update brief.html, wiki, readme, gh-pages
 # Update question requirements
 
-import re
-import sys, os, shutil
-import json
 import argparse
+import json
+import os
+import re
+import shutil
+import sys
+import tarfile
 import zipfile
 from html_templates import questionCategories,questionTemplate,quizTemplate
 from html_templates import singleTemplate
@@ -912,12 +915,115 @@ if __name__ == '__main__':
   # small p - based on big O ordering
   if args.peter:
     print "Entering Peter's special mode #1"
-    quiz_archives = [i for i in os.listdir(rootDir) if '.zip' in i.lower()]
-    os.makedirs(rootDir+'special')
-    for i in quiz_archives:
-      with zipfile.ZipFile(i, 'r') as f:
-        f.extractall(rootDir+'special')
+    quiz_archives = []
+    for candidate in os.listdir(rootDir):
+        if candidate.startswith(".") or candidate.startswith("_"):
+            continue
+        q = None
+        qd = None
+        qw = None
+        for f in os.listdir(os.path.join(rootDir, candidate)):
+            # Match archived submissions
+            if re.match("\d+-.*", f) is not None or f.startswith("."):
+                continue
 
+            if candidate in f.lower() and q is None:
+                if f.endswith(".zip"):
+                    q = os.path.join(rootDir, candidate, f)
+                elif f.endswith(".tar.gz"):
+                    q = os.path.join(rootDir, candidate, f)
+
+            if "daylate" == f:
+                for ff in  os.listdir(os.path.join(rootDir, candidate, "daylate")):
+                    if candidate in ff.lower() and qd is None:
+                        if ff.endswith(".zip"):
+                            qd = os.path.join(rootDir, candidate, "daylate", ff)
+                        elif ff.endswith(".tar.gz"):
+                            qd = os.path.join(rootDir, candidate, "daylate", ff)
+
+            if "weeklate" == f:
+                for ff in  os.listdir(os.path.join(rootDir, candidate, "weeklate")):
+                    if candidate in ff.lower() and ff.endswith(".zip") and qw is None:
+                        if ff.endswith(".zip"):
+                            qw = os.path.join(rootDir, candidate, "weeklate", ff)
+                        elif ff.endswith(".tar.gz"):
+                            qw = os.path.join(rootDir, candidate, "weeklate", ff)
+
+        if qw is not None:
+            quiz_archives.append(qw)
+            continue
+        if qd is not None:
+            quiz_archives.append(qd)
+            continue
+        if q is not None:
+            quiz_archives.append(q)
+            continue
+        print "Candidate *", candidate, "* did not follow submission instruction"
+
+    special = os.path.join(rootDir, 'special')
+    os.makedirs(special)
+
+    def check_content(archive_path, archive, archive_type):
+        # Check the structure
+        if archive_type == "tar":
+            f_names = archive.getnames()
+            struct = [x.split("/")[0] for x in f_names if x.count("/") > 0]
+            # print "tar"
+            if "1to1" in struct and "img" in struct and os.path.basename(archive_path)[:-7]+".quiz" in f_names:
+                return True
+            else:
+                print "Incorrect archive structure:", archive_path
+                return False
+        elif archive_type == "zip":
+            f_names = f.namelist()
+            struct = [x.split("/")[0] for x in f_names if x.count("/") > 0]
+            # print "zip"
+            if "1to1" in struct and "img" in struct and os.path.basename(archive_path)[:-4]+".quiz" in f_names:
+                return True
+            else:
+                print "Incorrect archive structure:", archive_path
+                return False
+        elif archive_type == "folder":
+            struct = os.listdir(archive)
+            # print "folder"
+            if "1to1" in struct and "img" in struct and os.path.basename(archive_path)[:-4]+".quiz" in struct:
+                return True
+            else:
+                print "Incorrect archive structure:", archive_path
+                return False
+
+    for i in quiz_archives:
+        if i.endswith(".tar.gz.zip"):
+            print ".tar.gz.zip archive?:", i
+            with zipfile.ZipFile(i, 'r') as f:
+                f.extractall(os.path.dirname(i))
+            with tarfile.open(i[:-4], 'r') as f:
+                if check_content(i, f, "tar"):
+                    f.extractall(special)
+        elif i.endswith(".zip"):
+            with zipfile.ZipFile(i, 'r') as f:
+                zip_main = os.path.basename(i)[:-4]+"/"
+                zip_files = os.path.join(os.path.dirname(i), zip_main)
+                if zip_main in f.namelist():
+                    # print "OSx archive?:", i
+                    f.extractall(zip_files)
+                    # Check the structure: folder
+                    if check_content(i, os.path.join(zip_files, zip_main), "folder"):
+                        for ff_root, _, ff_files in os.walk(os.path.join(zip_files, zip_main)):
+                            dest = os.path.join(special, os.path.relpath(ff_root, os.path.join(zip_files, zip_main)))
+                            if not os.path.exists(dest):
+                                os.makedirs(dest)
+                            for ff in ff_files:
+                                shutil.copy(os.path.join(ff_root, ff), dest)
+                else:
+                    if check_content(i, f, "zip"):
+                        f.extractall(special)
+        elif i.endswith(".tar.gz"):
+            with tarfile.open(i, 'r') as f:
+                if check_content(i, f, "tar"):
+                    f.extractall(special)
+
+    sys.exit()
     # iframe
     quizs = [i for i in os.listdir(rootDir+'special') if '.quiz' in i.lower()]
     link = "<a href=\"%s\">%s</a><br>\n"
