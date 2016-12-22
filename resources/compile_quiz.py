@@ -777,13 +777,27 @@ def orderQuestions(filename, order, uid, questions, to_file):
 def quizStats(uid, questionCount, sectionCoverage, difficulty, quantifiedSections, questionTypes):
   # split book coverage
   book_chapters = {}
+  book_sections = {}
+  out_of_scope = 0
+  print quantifiedSections
   for i in quantifiedSections:
     ch = i.split(".")[0]
-    if ch in book_chapters:
-      book_chapters[ch] += 1
+    if ch != "0":
+      # Book chapters
+      if ch in book_chapters:
+        book_chapters[ch] += 1
+      else:
+        book_chapters[ch] = 1
+      # Book sections
+      if i in book_sections:
+        book_sections[i] += quantifiedSections[i]
+      else:
+        book_sections[i] = quantifiedSections[i]
     else:
-      book_chapters[ch] = 1
+      out_of_scope += quantifiedSections[i]
+
   ch_number = len(book_chapters)
+  sc_number = len(book_sections)
   m = difficulty[4]+difficulty[3]*2+difficulty[2]*3+difficulty[1]*4+difficulty[0]*5
   m /= float(sum(difficulty))
 
@@ -803,6 +817,8 @@ def quizStats(uid, questionCount, sectionCoverage, difficulty, quantifiedSection
           "~ total:            %2d       |\n" +\
           "-----------------------------|\n" +\
           "@ chapter coverage: %2d       |\n" +\
+          "@ section coverage: %2d       |\n" +\
+          "@ out of scope:     %2d       |\n" +\
           "-----------------------------|\n" +\
           "# categories count:          |\n" +\
           "%s" +\
@@ -812,65 +828,108 @@ def quizStats(uid, questionCount, sectionCoverage, difficulty, quantifiedSection
           difficulty[2], 100.0*difficulty[2]/questionCount, \
           difficulty[3], 100.0*difficulty[3]/questionCount, \
           difficulty[4], 100.0*difficulty[4]/questionCount, \
-          m, questionCount, ch_number, categories)
+          m, questionCount, ch_number, sc_number, out_of_scope, categories)
 
-  difficultyRequirements = "\n"
+  pair_stats = """
+  40%%:
+    [%s] 12 questions
+    [%s] Covering 12 different chapters
+    [%s] Two questions for each of the 6 question types
+    [%s] Each question of at least difficulty 2 (%f)
+  70%%:
+    [%s] 24 questions
+    [%s] All chapters covered
+    [%s] Covering 24 different sections
+    [%s] At least two questions for each of the 6 question types
+    [%s] Average difficulty at least 3 (%f)
+  100%%:
+    [%s] 6 questions of difficulty 5
+  """
+  person_stats = """
+  40%%:
+    [%s] 6 questions
+    [%s] Covering 6 different chapters
+    [%s] One questions for each of the 6 question types
+    [%s] Each question of at least difficulty 2 (%f)
+  70%%:
+    [%s] 12 questions
+    [%s] Covering 12 different chapters
+    [%s] Two questions for each of the 6 question types
+    [%s] Average difficulty at least 3 (%f)
+  100%%:
+    [%s] 6 questions of difficulty 5
+  """
 
-  authors = ' & '.join(uid)
+  authors = "Detected authors: %s" % " & ".join(uid)
   authorsNo = len(uid)
-  if authorsNo > 2:
-    print "Too many candidate numbers detected (", authorsNo, ") : ", authors
-    sys.exit(1)
-
-  q_requirements = 6 * authorsNo
-  if questionCount < q_requirements:
-    difficultyRequirements += "& you need at least %d questions for 40%% &\n" % q_requirements
-    difficultyRequirements += "& all of the questions need to be of difficulty 2 at least &\n"
-    difficultyRequirements += "& you need at least %d questions for each type of question &\n" % authorsNo
-  elif questionCount < q_requirements*2:
-    difficultyRequirements += "& you have %d questions (%d are required for 40%% mark) &\n" % (questionCount, q_requirements*2)
-    if difficulty[3]+difficulty[2]+difficulty[1]+difficulty[0] < q_requirements*2:
-        difficultyRequirements += "& all of the questions need to be of difficulty 2 at least &\n"
-    if ch_number < 12:
-      difficultyRequirements += "& you need at least one question for each chapter &\n"
-    if len(questionTypes) < 6:
-      difficultyRequirements += "& you need at least %d questions for each type of question &\n" % authorsNo
-    else:
+  if authorsNo == 1:
+      xo = [" ", " ", " ", " ", 0, " ", " ", " ", " ", 0, " "]
+      if questionCount >= 6:
+          xo[0] = "X"
+      if ch_number >= 6:
+          xo[1] = "X"
+      qc = True
       for i in questionTypes:
-        if questionTypes[i] < authorsNo:
-          difficultyRequirements += "& you need at least %d questions for each type of question &\n" % authorsNo
-          break
-  elif questionCount < q_requirements*3:
-    difficultyRequirements += "& you have %d questions (%d are required for 70%% mark) &\n" % (questionCount, q_requirements*3)
-    if m <= 3:
-      difficultyRequirements += "& the average question difficulty needs to be at least 3 &\n"
-    if ch_number < 12:
-      difficultyRequirements += "& you need at least two questions for each chapter &\n"
-    else:
-      for i in book_chapters:
-        if book_chapters[i] < 2:
-          difficultyRequirements += "& you need at least two questions for each chapter &\n"
-          break
-    if len(questionTypes) < 6:
-      difficultyRequirements += "& you need at least %d questions for each type of question &\n" % authorsNo
-    else:
+          qc = qc and questionTypes[i] >= 1
+      if len(questionTypes) == 6 and qc:
+          xo[2] = "X"
+      if difficulty[4] == 0:
+          xo[3] = "X"
+      xo[4] = m
+      if questionCount >= 12:
+          xo[5] = "X"
+      if ch_number >= 12:
+          xo[6] = "X"
+      qc = True
       for i in questionTypes:
-        if questionTypes[i] < 2 * authorsNo:
-          difficultyRequirements += "& you need at least %d questions for each type of question &\n" % authorsNo
-          break
+          qc = qc and questionTypes[i] >= 2
+      if len(questionTypes) == 6 and qc:
+          xo[7] = "X"
+      if xo[4] >= 3:
+          xo[8] = "X"
+      xo[9] = xo[4]
+      if difficulty[0] >= 6:
+          xo[10] = "X"
+          xo[6] = "X"
+      return authors + "\n" + stats + (person_stats % tuple(xo))
+  elif authorsNo == 2:
+      xo = [" ", " ", " ", " ", 0, " ", " ", " ", " ", " ", 0, " "]
+      if questionCount >= 12:
+          xo[0] = "X"
+      if ch_number >= 12:
+          xo[1] = "X"
+      qc = True
+      for i in questionTypes:
+          qc = qc and questionTypes[i] >= 2
+      if len(questionTypes) == 6 and qc:
+          xo[2] = "X"
+      if difficulty[4] == 0:
+          xo[3] = "X"
+      xo[4] = m
+      if questionCount >= 24:
+          xo[5] = "X"
+      if ch_number >= 12:
+          xo[6] = "X"
+      ## All from different section
+      if sc_number >= 24:
+          xo[7] = "X"
+      qc = True
+      for i in questionTypes:
+          qc = qc and questionTypes[i] >= 2
+      if len(questionTypes) == 6 and qc:
+          xo[8] = "X"
+      if xo[4] >= 3:
+          xo[9] = "X"
+      xo[10] = xo[4]
+      if difficulty[0] >= 6:
+          xo[11] = "X"
+          xo[7] = "X"
+      return authors + "\n" + stats + (pair_stats % tuple(xo))
   else:
-    difficultyRequirements += "& you have %d questions (%d are required for 100%% mark) &\n" % (questionCount, q_requirements*3)
-
-  detection = "\n"
-  if difficultyRequirements != "\n":
-    detection += "Detected " + str(authorsNo)
-    if authorsNo == 1:
-      detection += " author: "
-    else:
-      detection += " authors: "
-    detection += str(authors) + "\nComments:" + difficultyRequirements.replace("\n", "\n  ")
-
-  return stats + detection
+    print "Error"
+    print "Detected %d candidate number(s)" % authorsNo
+    print authors
+    sys.exit(1)
 
 if __name__ == '__main__':
   # parse arguments
@@ -907,7 +966,7 @@ if __name__ == '__main__':
     rootDir = quizFilename[::-1][rootDir_i:][::-1]
   else:
     rootDir = "./"
-  if (not args.peter) and (not args.Peter):
+  if (not args.peter) and (not args.Peter) and (not args.count):
     if not os.path.exists(rootDir+"resources/js/wpProQuiz_jquery.ui.touch-punch.min.js"):
       print "Your .quiz files must be located in the root directory of this package to work properly."
       sys.exit(1)
