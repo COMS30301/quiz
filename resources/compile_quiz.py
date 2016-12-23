@@ -983,6 +983,7 @@ if __name__ == '__main__':
   # small p - based on big O ordering
   if args.peter:
     print "Entering Peter's special mode #1"
+    log = []
     quiz_archives = []
     for candidate in os.listdir(rootDir):
         if candidate.startswith(".") or candidate.startswith("_"):
@@ -1026,7 +1027,8 @@ if __name__ == '__main__':
         if q is not None:
             quiz_archives.append(q)
             continue
-        print "Candidate *", candidate, "* did not follow submission instruction"
+        log.append("ERROR: Candidate *%s* did not follow submission instruction" % candidate)
+        print log[-1]
 
     special = os.path.join(rootDir, 'special')
     os.makedirs(special)
@@ -1038,86 +1040,125 @@ if __name__ == '__main__':
             struct = [x.split("/")[0] for x in f_names if x.count("/") > 0]
             # print "tar"
             if "1to1" in struct and os.path.basename(archive_path)[:-7]+".quiz" in f_names:
-                return True
+                return ""
             else:
-                print "Incorrect archive structure:", archive_path
-                return False
+                return "ERROR: Incorrect archive structure: %s" % archive_path
         elif archive_type == "zip":
             f_names = f.namelist()
             struct = [x.split("/")[0] for x in f_names if x.count("/") > 0]
             # print "zip"
             if "1to1" in struct and os.path.basename(archive_path)[:-4]+".quiz" in f_names:
-                return True
+                return ""
             else:
-                print "Incorrect archive structure:", archive_path
-                return False
+                return "ERROR: Incorrect archive structure: %s" % archive_path
         elif archive_type == "folder":
             struct = os.listdir(archive)
             # print "folder"
             if "1to1" in struct and os.path.basename(archive_path)[:-4]+".quiz" in struct:
-                return True
+                return ""
             else:
-                print "Incorrect archive structure:", archive_path
-                return False
+                return "ERROR: Incorrect archive structure: %s" % archive_path
 
     for i in quiz_archives:
         if i.endswith(".tar.gz.zip"):
-            print ".tar.gz.zip archive?:", i
+            log.append(".tar.gz.zip archive?: %s" % i)
+            print log[-1]
             with zipfile.ZipFile(i, 'r') as f:
                 f.extractall(os.path.dirname(i))
             with tarfile.open(i[:-4], 'r') as f:
-                if check_content(i, f, "tar"):
+                cc = check_content(i, f, "tar")
+                if not cc:
+                    log.append(">>Extracting: %s" % i)
                     f.extractall(special)
+                else:
+                    log.append(cc)
+                    print log[-1]
         elif i.endswith(".zip"):
             with zipfile.ZipFile(i, 'r') as f:
                 zip_main = os.path.basename(i)[:-4]+"/"
                 zip_files = os.path.join(os.path.dirname(i), zip_main)
                 if zip_main in f.namelist():
-                    # print "OSx archive?:", i
+                    log.append("OSx archive?: %s" % i)
+                    # print log[-1]
+                    # print
                     f.extractall(zip_files)
                     # Check the structure: folder
-                    if check_content(i, os.path.join(zip_files, zip_main), "folder"):
+                    cc = check_content(i, os.path.join(zip_files, zip_main), "folder")
+                    if not cc:
+                        log.append(">>Extracting: %s" % i)
                         for ff_root, _, ff_files in os.walk(os.path.join(zip_files, zip_main)):
                             dest = os.path.join(special, os.path.relpath(ff_root, os.path.join(zip_files, zip_main)))
                             if not os.path.exists(dest):
                                 os.makedirs(dest)
                             for ff in ff_files:
                                 shutil.copy(os.path.join(ff_root, ff), dest)
+                    else:
+                        log.append(cc)
+                        print log[-1]
                 else:
-                    if check_content(i, f, "zip"):
+                    cc = check_content(i, f, "zip")
+                    if not cc:
+                        log.append(">>Extracting: %s" % i)
                         f.extractall(special)
+                    else:
+                        log.append(cc)
+                        print log[-1]
         elif i.endswith(".tar.gz"):
             with tarfile.open(i, 'r') as f:
-                if check_content(i, f, "tar"):
+                cc = check_content(i, f, "tar")
+                if not cc:
+                    log.append(">>Extracting: %s" % i)
                     f.extractall(special)
+                else:
+                    log.append(cc)
+                    print log[-1]
 
-    sys.exit()
+    # Move quiz HTML resources
+    shutil.copytree(os.path.dirname(sys.argv[0]),
+                    os.path.join(special,"resources"))
+
     # iframe
-    quizs = [i for i in os.listdir(rootDir+'special') if '.quiz' in i.lower()]
+    quizs = [i for i in os.listdir(special) if i.lower().endswith('.quiz')]
     link = "<a href=\"%s\">%s</a><br>\n"
     body = ""
+    print ""
     for i in quizs:
-      results, title, url, uid, sectionCoverage, difficulty, quantifiedSections, questionTypes = parseQuestions(rootDir+'special/'+i)
+      try:
+        results, title, url, uid, sectionCoverage, difficulty, quantifiedSections, questionTypes = parseQuestions(os.path.join(special, i))
+        log.append("Compiling: %s" % os.path.join(special, i))
+        print log[-1]
 
-      # bog O ordering
-      results = orderQuestions(rootDir+'special/'+i, 'O', uid, results, True)
+        # bog O ordering
+        results = orderQuestions(os.path.join(special, i), 'O', uid, results, True)
 
-      qfilenames = toHtml(rootDir+'special/'+i, results, title, True)
-      new_qfilenames = [os.path.basename(j) for j in qfilenames]
+        qfilenames = toHtml(os.path.join(special, i), results, title, True)
+        new_qfilenames = [os.path.basename(j) for j in qfilenames]
 
-      # write stat file
-      stat = quizStats(uid, len(results), sectionCoverage, difficulty, quantifiedSections, questionTypes)
-      with open(rootDir+'special/'+i[:-5]+'.stat', 'w') as stat_file:
-        stat_file.write(stat)
+        # write stat file
+        stat = quizStats(uid, len(results), sectionCoverage, difficulty, quantifiedSections, questionTypes)
+        with open(os.path.join(special, i[:-5]+'.stat'), 'w') as stat_file:
+            stat_file.write(stat)
 
-      writeIframe(rootDir+'special/'+i, [i[:-5]+'.stat']+new_qfilenames)
+        writeIframe(os.path.join(special, i), [i[:-5]+'.stat']+new_qfilenames)
 
-      body += link % (os.path.basename(i)[:-5]+'_iFrame.html', os.path.basename(i))
+        body += link % (os.path.basename(i)[:-5]+'_iFrame.html', os.path.basename(i))
+      except ValueError as e:
+        log.append("ERROR compiling: %s" % os.path.join(special, i))
+        print log[-1]
+        log.append("\n".join([5*" "+i for i in str(e).split("\n")]))
+        print log[-1]
 
     # general HTML
     body = iframeGeneralTemplate % {'iframes':body}
-    with open(rootDir+'special/index.html', 'w') as index_file:
+    with open(os.path.join(rootDir, 'special', 'index.html'), 'w') as index_file:
       index_file.write(body)
+
+    # Save log
+    with open(os.path.join(rootDir, 'special', 'log.txt'), 'w') as log_file:
+      log_file.write("\n".join(log))
+
+      errors = [i for i in log if i.startswith("ERROR") or i.startswith("     ")]
+      log_file.write("\n\n"+40*"~*"+"\n\n"+"\n".join(errors))
 
     sys.exit(0)
 
