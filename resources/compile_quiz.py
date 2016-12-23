@@ -1096,7 +1096,7 @@ if __name__ == '__main__':
             with zipfile.ZipFile(i, 'r') as f:
                 f.extractall(os.path.dirname(i))
             with tarfile.open(i[:-4], 'r') as f:
-                cc = check_content(i, f, "tar")
+                cc = check_content(i[:-4], f, "tar")
                 if not cc:
                     log.append(">>Extracting: %s" % i)
                     f.extractall(special)
