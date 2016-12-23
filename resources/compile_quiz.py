@@ -1007,6 +1007,12 @@ if __name__ == '__main__':
   if args.peter:
     print "Entering Peter's special mode #1"
     print "Organise student's FEN submissions into a webpage (order the questions based on difficulty)"
+    ANSWERS_DEBUG = True
+    SHOW_HINTS = True
+    SHOW_COMMENTS = True
+    SHOW_SOURCE = True
+    SHOW_WORKINGS = True
+    SHOW_EXPLANATION = True
     log = []
     quiz_archives = []
     for candidate in os.listdir(rootDir):
