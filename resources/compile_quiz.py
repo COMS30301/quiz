@@ -774,12 +774,11 @@ def orderQuestions(filename, order, uid, questions, to_file):
 #
 # produce quiz statistics#
 #
-def quizStats(uid, questionCount, sectionCoverage, difficulty, quantifiedSections, questionTypes):
+def quizStats(uid, questionCount, sectionCoverage, difficulty, quantifiedSections, questionTypes,peter_difficulty=None):
   # split book coverage
   book_chapters = {}
   book_sections = {}
   out_of_scope = 0
-  print quantifiedSections
   for i in quantifiedSections:
     ch = i.split(".")[0]
     if ch != "0":
@@ -801,34 +800,44 @@ def quizStats(uid, questionCount, sectionCoverage, difficulty, quantifiedSection
   m = difficulty[4]+difficulty[3]*2+difficulty[2]*3+difficulty[1]*4+difficulty[0]*5
   m /= float(sum(difficulty))
 
+  if peter_difficulty is None:
+      peter_difficulty = tuple(5*["      "])
+      peter_m = "       "
+  else:
+      peter_m = (peter_difficulty[4] + peter_difficulty[3]*2 + \
+                 peter_difficulty[2]*3 + peter_difficulty[1]*4 + \
+                 peter_difficulty[0]*5) / float(sum(peter_difficulty))
+      peter_m = "p[%.2f]q" % peter_m
+      peter_difficulty = ["p[%2d]q" % i for i in peter_difficulty]
+
   categories = ""
   for i in questionTypes:
-    categories += " -%s%2d |\n" % (i.ljust(24), questionTypes[i])
+    categories += "- %s %2d".ljust(22) % ((i+":").ljust(20), questionTypes[i]) + "|\n"
 
-  stats =("-----------------------------|\n" +\
-          "^ (5) hard:         %2d (%2d%%) |\n" +\
-          "| (4) hard-medium:  %2d (%2d%%) |\n" +\
-          "| (3) medium:       %2d (%2d%%) |\n" +\
-          "| (2) medium-easy:  %2d (%2d%%) |\n" +\
-          "v (1) easy:         %2d (%2d%%) |\n" +\
-          "-----------------------------|\n" +\
-          "~ average difficulty: %.2f   |\n" +\
-          "-----------------------------|\n" +\
-          "~ total:            %2d       |\n" +\
-          "-----------------------------|\n" +\
-          "@ chapter coverage: %2d       |\n" +\
-          "@ section coverage: %2d       |\n" +\
-          "@ out of scope:     %2d       |\n" +\
-          "-----------------------------|\n" +\
-          "# categories count:          |\n" +\
+  stats =("'''''''''''''''''''''''''''''''''''''''|\n" +\
+          "^ (5) hard:        %2d (%2d%%)   %s   |\n" +\
+          "| (4) hard-medium: %2d (%2d%%)   %s   |\n" +\
+          "| (3) medium:      %2d (%2d%%)   %s   |\n" +\
+          "| (2) medium-easy: %2d (%2d%%)   %s   |\n" +\
+          "v (1) easy:        %2d (%2d%%)   %s   |\n" +\
+          "---------------------------------------|\n" +\
+          "~ avg difficulty:   %.2f     %s   |\n" +\
+          "---------------------------------------|\n" +\
+          "~ total:            %2d                 |\n" +\
+          "---------------------------------------|\n" +\
+          "@ chapter coverage: %2d                 |\n" +\
+          "@ section coverage: %2d                 |\n" +\
+          "@ advanced topic:   %2d                 |\n" +\
+          "---------------------------------------|\n" +\
+          "# categories count:                    |\n" +\
           "%s" +\
-          "-----------------------------|\n" ) %\
-          (difficulty[0], 100.0*difficulty[0]/questionCount, \
-          difficulty[1], 100.0*difficulty[1]/questionCount, \
-          difficulty[2], 100.0*difficulty[2]/questionCount, \
-          difficulty[3], 100.0*difficulty[3]/questionCount, \
-          difficulty[4], 100.0*difficulty[4]/questionCount, \
-          m, questionCount, ch_number, sc_number, out_of_scope, categories)
+          "_______________________________________|\n" ) %\
+          (difficulty[0], 100.0*difficulty[0]/questionCount, peter_difficulty[0],\
+          difficulty[1], 100.0*difficulty[1]/questionCount, peter_difficulty[1],\
+          difficulty[2], 100.0*difficulty[2]/questionCount, peter_difficulty[2],\
+          difficulty[3], 100.0*difficulty[3]/questionCount, peter_difficulty[3],\
+          difficulty[4], 100.0*difficulty[4]/questionCount, peter_difficulty[4],\
+          m, peter_m, questionCount, ch_number, sc_number, out_of_scope, categories)
 
   pair_stats = """
   40%%:
