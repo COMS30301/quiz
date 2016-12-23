@@ -174,6 +174,10 @@ def parseQuestions(filename):
   # find the parent url
   url = quiz_text.get('url', '')
 
+  # -P find mark
+  mark = int(quiz_text.get('mark', '-1'))
+  p_difficulty_count = [0, 0, 0, 0, 0]
+
   # find title for quiz
   title = quiz_text.get('title', '')
 
@@ -197,6 +201,23 @@ def parseQuestions(filename):
 
   for q in questions:
     out = {}
+    # -P find usability
+    out["quality"] = questions[q].get('qlt', '').strip()
+    # -P find feedback
+    out["fdbck"] = questions[q].get('fdbck', '').strip()
+    # -P find difficulty
+    out["diff"] = questions[q].get('diff', '').strip()
+    # count difficulties
+    if out['diff'] == "5":
+      p_difficulty_count[0] += 1
+    elif out['diff'] == "4":
+      p_difficulty_count[1] += 1
+    elif out['diff'] == "3":
+      p_difficulty_count[2] += 1
+    elif out['diff'] == "2":
+      p_difficulty_count[3] += 1
+    elif out['diff'] == "1":
+      p_difficulty_count[4] += 1
 
     out['fullq'] = json.dumps(questions[q], sort_keys=True, indent=4)
 
@@ -445,7 +466,7 @@ def parseQuestions(filename):
 
     results.append(out)
 
-  return(results, title, url, uid, unique_sections, difficulty_count, used_sections, used_question_types)
+  return(results, title, url, uid, unique_sections, difficulty_count, used_sections, used_question_types, mark, p_difficulty_count)
 
 # return HTML image environment
 def insertImage(path, caption):
@@ -696,43 +717,45 @@ def updateIndex(dirname, jsonPath):
 #
 # generate feedback for given user
 #
-def toFeedback( rootDir, uid, results, sectionCoverage, difficulty, quantifiedSections, questionTypes ):
+def toFeedback(rootDir, uid, results, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_difficulty_count):
   d = []
   for r in results:
-    d.append('#' + str(r['number']).zfill(2) + ': ' + r['text'])
+    d.append('#' + str(r['number']).zfill(2) + ' -- feedback:            ' + r['fdbck'])
+    d.append('#' + str(r['number']).zfill(2) + ' -- difficulty:          ' + r['difficulty'])
+    d.append('#' + str(r['number']).zfill(2) + ' -- adjusted difficulty: ' + r['diff'] + "\n")
   d.sort()
 
-  feedbackFile = rootDir + "feedback_" + '_'.join(uid) + ".txt"
+  feedback = quizStats(uid, len(results), sectionCoverage, difficulty, quantifiedSections, questionTypes)
+  feedback += '\n\n' + 'Mark: %3d'%mark + '\n\n' + '\n'.join(d)
+
+  feedbackFile = os.path.join(rootDir,"feedback_"+'_'.join(uid)+".txt")
   with open(feedbackFile, 'w') as ffile:
-    ffile.write( quizStats(uid, len(results), sectionCoverage, difficulty, quantifiedSections, questionTypes) )
-    ffile.write('\n\n')
-    ffile.write( '\n'.join(d) )
+    ffile.write(feedback)
+
+  csv_feedback = []
+  for i in uid:
+    csv_feedback.append(i + "," + str(mark) + ",\"" + feedback.replace("\"", "\"\"") + "\"")
+  return csv_feedback
 
 #
 # generate marked questions
 #
-def extract(rootDir, uid, results):
-  needed_images = []
-
-  any_to_extract = False
-
-  d = [ 'uid: ' + i + '\n' for i in uid]
+def extract(rootDir, uid, results, extract_img=False):
+  d = ["{\n    \"candidate_number\": [%s],\n" % ", ".join(uid)]
   for r in results:
-    if r['quality']:
-      any_to_extract = True
-      d.append(r['fullq'])
-      # get list of images
-      if r['images']:
-        if r['images'] not in needed_images:
-          needed_images += r['images']
-
-  extractFile = rootDir + "extract_" + '_'.join(uid) + ".quiz"
-
-  if any_to_extract:
-    with open(extractFile, 'w') as efile:
+    if r["quality"]:
+      d.append(r["fullq"])
+      d.append(",\n")
+  d.append("}\n")
+  if len(d) > 2:
+    if extract_img:
+      shutil.copytree(os.path.join(rootDir,"img","_".join(uid)),
+                      os.path.join(rootDir,"extract","img","_".join(uid)))
+      quiz_file = os.path.join(rootDir,"extract","_".join(uid)+".quiz")
+    else:
+      quiz_file = os.path.join(rootDir,"extracted_"+"_".join(uid)+".quiz")
+    with open(quiz_file, "w") as efile:
       efile.write( '\n'.join(d) )
-
-  return needed_images
 
 #
 # generate iFrame
@@ -983,6 +1006,7 @@ if __name__ == '__main__':
   # small p - based on big O ordering
   if args.peter:
     print "Entering Peter's special mode #1"
+    print "Organise student's FEN submissions into a webpage (order the questions based on difficulty)"
     log = []
     quiz_archives = []
     for candidate in os.listdir(rootDir):
@@ -1124,7 +1148,7 @@ if __name__ == '__main__':
     print ""
     for i in quizs:
       try:
-        results, title, url, uid, sectionCoverage, difficulty, quantifiedSections, questionTypes = parseQuestions(os.path.join(special, i))
+        results, title, url, uid, sectionCoverage, difficulty, quantifiedSections, questionTypes, _, _ = parseQuestions(os.path.join(special, i))
         log.append("Compiling: %s" % os.path.join(special, i))
         print log[-1]
 
@@ -1165,26 +1189,28 @@ if __name__ == '__main__':
   # big P - based on big O ordering
   if args.Peter:
     print "Entering Peter's special mode #2"
+    print "Generate feedback from submissions organised with Peter's mode #1"
+    print "Extracting questions indicated as useful"
     # generate feedback based on O
-    if not os.path.exists(rootDir+'feedback'):
-      os.makedirs(rootDir+'feedback')
-    if not os.path.exists(rootDir+'extract'):
-      os.makedirs(rootDir+'extract')
-    quizs = [i for i in os.listdir(rootDir) if '_^O.quiz' in i]
+    if not os.path.exists(os.join.path(rootDir,'feedback')):
+      os.makedirs(os.join.path(rootDir,'feedback'))
+    if not os.path.exists(os.join.path(rootDir,'extract')):
+      os.makedirs(os.join.path(rootDir,'extract'))
+    quizs = [i for i in os.listdir(rootDir) if i.endswith('_^O.quiz')]
+
+    csv_feedback = ["Student,Spam,Feedback"]
     for i in quizs:
-      results, title, url, uid, sectionCoverage, difficulty, quantifiedSections, questionTypes = parseQuestions(rootDir+os.path.basename(i))
-      # bog O ordering
-      results = orderQuestions(rootDir+i, 'O', uid, results, False)
-      toFeedback( rootDir+'feedback/', uid, results, sectionCoverage, difficulty, quantifiedSections, questionTypes )
-      # extract all marked questions with graphics
-      imgs = extract(rootDir+'extract/', uid, results)
-      for img in imgs:
-        if not os.path.exists(os.path.dirname(rootDir+'extract/'+img)):
-          os.makedirs(os.path.dirname(rootDir+'extract/'+img))
-        shutil.copy(rootDir+img, os.path.dirname(rootDir+'extract/'+img))
+      results, title, url, uid, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_diff_count = parseQuestions(os.path.join(rootDir,os.path.basename(i)))
+      # Big-O ordering
+      results = orderQuestions(os.path.join(rootDir,i), 'O', uid, results, False)
+      csv_feedback += toFeedback(os.path.join(rootDir,'feedback/'), uid, results, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_diff_count)
+      # Extract all marked questions with graphics
+      extract(rootDir, uid, results, True)
+    with open(os.join.path(rootDir,'feedback.csv'), "w") as csv_file:
+      csv_file.write("\n".join(csv_feedback))
     sys.exit(0)
 
-  results, title, url, uid, sectionCoverage, difficulty, quantifiedSections, questionTypes = parseQuestions(quizFilename)
+  results, title, url, uid, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_diff_count = parseQuestions(quizFilename)
 
   # order questions if needed
   if args.tarball:
@@ -1252,7 +1278,7 @@ if __name__ == '__main__':
 
   if args.feedback:
     print( "Generating feedback for " + ' & '.join(uid) )
-    toFeedback( rootDir, uid, results, sectionCoverage, difficulty, quantifiedSections, questionTypes )
+    toFeedback( rootDir, uid, results, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_diff_count )
   elif args.question:
     print( "Generating question #" + str(args.question[-1]) )
     toHtml(quizFilename, results, title, args.question)
