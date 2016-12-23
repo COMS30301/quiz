@@ -162,10 +162,10 @@ def parseQuestions(filename):
     quiz_text = quiz_file.read()
 
   # remove comments from quiz file
-  quiz_text = re.sub(r'^\s*//.+$', "", quiz_text, flags=re.M)
+  quiz_text = re.sub(r'^\s*//.+[\r\n]+', "", quiz_text, flags=re.M)
 
   # merge lines ended with "\": allow multiline in strings
-  quiz_text = re.sub(r'\\$\s*', "", quiz_text, flags=re.M)
+  quiz_text = re.sub(r'\\[\r\n]+\s*', "", quiz_text, flags=re.M)
 
   # read in JSON
   # quiz_text = json.loads(quiz_text)
