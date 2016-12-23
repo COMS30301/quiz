@@ -205,7 +205,7 @@ As the quiz file is translated into HTML the questions and answers support HTML 
 Moreover, both *in-line* LaTeX (introduced by `$` environment e.g. `$\LaTeX$`) and *display* LaTeX (introduced by `$$` environment e.g. `$$\LaTeX$$`) are supported.
 
 ## Online quiz example ##
-See an [example quiz](http://so-cool.github.io/quick-quiz/my_quiz.html).
+See an [example quiz](http://coms30301.github.io/quiz).
 
 ## Not compiling questions ##
 If your question is not compiling and you have followed all the guidelines given in this document you can email me for help.  
@@ -221,7 +221,7 @@ First, create a quiz text file using the following format (named `my_quiz.quiz` 
   // <- (this is a comment and will be ignored)
 
   // this is the url for your quiz
-  "url": "http://so-cool.github.io/quick-quiz/",
+  "url": "http://coms30301.github.io/quiz/",
 
   // this are your UoB candidate numbers as a comma separated list
   "candidate_number": [12345, 54321],
@@ -442,18 +442,105 @@ Finally, `-t` creates a *tarball* (archive) with all the files necessary for sub
 Please submit only a tarball with your quiz created with `-t` option. Your submission will primarily be marked on the diversity and originality of your questions, as well as your assessment of their difficulty level.
 
 # Assignment description #
-Full assignment description is available [here](https://github.com/So-Cool/quick-quiz/wiki/Option-3:-ML-Quiz).
+Full assignment description is available [here](https://github.com/COMS30301/quiz/wiki/Option-3:-ML-Quiz).
 
 # Marking - markers only #
-**Please do not use these options!**
+**Please do not use these options!**  
+The easies way to mark this assignment is through `-p` and `-P` options:
 
-**TO BE UPDATED**
+1. Downlad the submissions from FEN and unpack the `zip` archive.
+2. Use `-p` option to organise the submissions: `python resources/compile_quiz.py /path/to/QUIZ`.
+3. This will generate a `special` folder in `/path/to/QUIZ` i.e. `/path/to/QUIZ/special`.
+4. Incorrect file (not following submission guidelines) will not be unpacked and an error message will be placed in the log file `/path/to/QUIZ/special/log.txt`.
+5. To open a web page with all of the submissions follow `/path/to/QUIZ/special/index.html`
+6 The questions there are orderd *by difficulty*.
+7. The marking should be inputed into `/path/to/QUIZ/special/*_^O.quiz` corresponding to currently viewed submission (this file has the same question order as the web page).
+    * To input mark use global **mark** keyword;
+    * For each question use the keywords:
+        - **qlt** -- question quality (*optional parameter*): **-** if needs minor changes, **+** if it's flawles ;
+        - **fdbck** -- text feedback;
+        - **diff** -- difficulty 1--5.
+8. When marking is finished (mark, feedback, difficulty and quality) use **-P** option to generate feedback (text and `csv` for FEN) and extracted indicated questions.
 
-## Feedback ##
-**TO BE UPDATED**
+```
+{
+  "url": "http://coms30301.github.io/quiz/",
+  "candidate_number": [12345, 54321],
+  "title": "Quizk-quiz show-off.",
 
-## Question quality ##
-**TO BE UPDATED**
+  "mark": "70",
 
-## Mark ##
-**TO BE UPDATED**
+  "1": {
+    "qlt": "-",
+    "fdbck": "This is really dumb question",
+    "diff": "1",
+  
+    "difficulty": "1",
+    "reference": "5.2",
+    "problem_type": "definitions",
+    "question": "Which of the following is $\\LaTeX$ \
+                 equation\
+                 ?",
+    "images": [
+      { "url": "img/unicorn.jpg",
+        "caption": "my caption"
+      }
+    ],
+    "answer_type": "single",
+    "answers": [
+      { "correctness": "-",
+        "answer": "2 * 2"
+      },
+      { "correctness": "-",
+        "answer": "2 - 3"
+      },
+      { "correctness": "+",
+        "answer": "$\\frac{7}{2} + 3$",
+        "explanation": "why this answer is correct"
+      },
+      { "correctness": "-",
+        "answer": "seven plus two"
+      }
+    ],
+    "hint": "you do the math",
+    "workings": "how to arrive at the correct answer and why all the others are incorrect",
+    "source": "wikipedia url",
+    "comments": "What's special about this question?"
+  },
+
+  "2": {
+    "fdbck": "This question is extremely dumb",
+    "diff": "2",
+  
+    "difficulty": "5",
+    "reference": "2.2",
+    "problem_type": "calculations",
+    "question": "Mark all the letters:",
+    "answer_type": "multiple",
+    "answers": [
+      { "correctness": "+",
+        "answer": "T",
+        "explanation": "why this answer is correct"
+      },
+      { "correctness": "+",
+        "answer": "F",
+        "explanation": "why this answer is correct"
+      },
+      { "correctness": "-",
+        "answer": "7"
+      },
+      { "correctness": "-",
+        "answer": "<img src=\"img/unicorn.jpg\" style=\"width:304px;height:228px;\">"
+      },
+      { "correctness": "+",
+        "answer": "W",
+        "explanation": "why this answer is correct"
+      }
+    ],
+    "hint": "you do the alphabet",
+    "workings": "how to arrive at the correct answer and why all the others are incorrect",
+    "source": "some book",
+    "comments": "What's special about this question?"
+  }
+}
+```
