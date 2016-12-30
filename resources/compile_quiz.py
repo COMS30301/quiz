@@ -1201,13 +1201,13 @@ if __name__ == '__main__':
     print "Generate feedback from submissions organised with Peter's mode #1"
     print "Extracting questions indicated as useful"
     # generate feedback based on O
-    if not os.path.exists(os.join.path(rootDir,'feedback')):
-      os.makedirs(os.join.path(rootDir,'feedback'))
-    if not os.path.exists(os.join.path(rootDir,'extract')):
-      os.makedirs(os.join.path(rootDir,'extract'))
+    if not os.path.exists(os.path.join(rootDir,'feedback')):
+      os.makedirs(os.path.join(rootDir,'feedback'))
+    if not os.path.exists(os.path.join(rootDir,'extract')):
+      os.makedirs(os.path.join(rootDir,'extract'))
     quizs = [i for i in os.listdir(rootDir) if i.endswith('_^O.quiz')]
 
-    csv_feedback = ["Student,Spam,Feedback"]
+    csv_feedback = ["Student,Quiz,Feedback"]
     for i in quizs:
       results, title, url, uid, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_diff_count, global_feedback = parseQuestions(os.path.join(rootDir,os.path.basename(i)))
       # Big-O ordering
@@ -1215,7 +1215,7 @@ if __name__ == '__main__':
       csv_feedback += toFeedback(os.path.join(rootDir,'feedback/'), uid, results, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_diff_count, global_feedback)
       # Extract all marked questions with graphics
       extract(rootDir, uid, results, True)
-    with open(os.join.path(rootDir,'feedback.csv'), "w") as csv_file:
+    with open(os.path.join(rootDir,'feedback.csv'), "w") as csv_file:
       csv_file.write("\n".join(csv_feedback))
     sys.exit(0)
 
