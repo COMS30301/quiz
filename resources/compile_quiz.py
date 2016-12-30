@@ -205,24 +205,22 @@ def parseQuestions(filename):
   for q in questions:
     out = {}
     # -P find usability
-    out["quality"] = questions[q].get('qlt', '').strip()
+    out["_qlt"] = questions[q].get('_qlt', '-').strip()
     # -P find feedback
-    out["fdbck"] = questions[q].get('fdbck', '').strip()
+    out["_fdbck"] = questions[q].get('_fdbck', 'NO FEEDBACK GIVEN').strip()
     # -P find difficulty
-    out["diff"] = questions[q].get('diff', '').strip()
+    out["_diff"] = questions[q].get('_diff', '-1').strip()
     # count difficulties
-    if out['diff'] == "5":
+    if out['_diff'] == "5":
       p_difficulty_count[0] += 1
-    elif out['diff'] == "4":
+    elif out['_diff'] == "4":
       p_difficulty_count[1] += 1
-    elif out['diff'] == "3":
+    elif out['_diff'] == "3":
       p_difficulty_count[2] += 1
-    elif out['diff'] == "2":
+    elif out['_diff'] == "2":
       p_difficulty_count[3] += 1
-    elif out['diff'] == "1":
+    elif out['_diff'] == "1":
       p_difficulty_count[4] += 1
-
-    out['fullq'] = json.dumps(questions[q], sort_keys=True, indent=4)
 
     out['number'] = int(q)
     if out['number'] in question_indeces:
@@ -322,6 +320,12 @@ def parseQuestions(filename):
       difficulty_count[3] += 1
     elif out['difficulty'] == "1":
       difficulty_count[4] += 1
+
+    q_copy = questions[q].copy()
+    q_copy["_qlt"] = "-"
+    q_copy["_fdbck"] = "NO FEEDBACK GIVEN"
+    q_copy["_diff"] = difficulty
+    out['fullq'] = json.dumps(q_copy, sort_keys=True, indent=4)
 
     if out['answer_type'].lower() == 'single' or \
        out['answer_type'].lower() == 'multiple' or \
@@ -723,9 +727,9 @@ def updateIndex(dirname, jsonPath):
 def toFeedback(rootDir, uid, results, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_difficulty_count, global_feedback):
   d = []
   for r in results:
-    d.append('#' + str(r['number']).zfill(2) + ' -- feedback:            ' + r['fdbck'])
+    d.append('#' + str(r['number']).zfill(2) + ' -- adjusted difficulty: ' + r['_diff'])
     d.append('#' + str(r['number']).zfill(2) + ' -- difficulty:          ' + r['difficulty'])
-    d.append('#' + str(r['number']).zfill(2) + ' -- adjusted difficulty: ' + r['diff'] + "\n")
+    d.append('#' + str(r['number']).zfill(2) + ' -- feedback:            ' + r['_fdbck'] + '\n')
   d.sort()
 
   feedback = quizStats(uid, len(results), sectionCoverage, difficulty, quantifiedSections, questionTypes)
@@ -744,13 +748,11 @@ def toFeedback(rootDir, uid, results, sectionCoverage, difficulty, quantifiedSec
 # generate marked questions
 #
 def extract(rootDir, uid, results, extract_img=False):
-  d = ["{\n    \"candidate_number\": [%s],\n" % ", ".join(uid)]
+  d = {"candidate_number":uid}
   for r in results:
-    if r["quality"]:
-      d.append(r["fullq"])
-      d.append(",\n")
-  d.append("}\n")
-  if len(d) > 2:
+    if r["_qlt"] != '-':
+      d[str(r['number'])] = r
+  if len(d) > 1:
     if extract_img:
       shutil.copytree(os.path.join(rootDir,"img","_".join(uid)),
                       os.path.join(rootDir,"extract","img","_".join(uid)))
@@ -758,7 +760,7 @@ def extract(rootDir, uid, results, extract_img=False):
     else:
       quiz_file = os.path.join(rootDir,"extracted_"+"_".join(uid)+".quiz")
     with open(quiz_file, "w") as efile:
-      efile.write( '\n'.join(d) )
+      json.dump(d, efile, indent=4)
 
 #
 # generate iFrame
@@ -788,6 +790,8 @@ def orderQuestions(filename, order, uid, questions, to_file):
     f_content = []
     f_content.append('{\n')
     f_content.append('"candidate_number": ' + json.dumps(uid) + ',\n')
+    f_content.append('"mark": "-1",\n')
+    f_content.append('"feedback": "NOT GIVEN",\n')
     for i in out:
       f_content.append('\n"' + str(i["number"]) + '": ' + i['fullq'] + ",")
     f_content[-1] = f_content[-1][:-1] # remove the last comma
