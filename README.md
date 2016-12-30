@@ -461,7 +461,7 @@ The easies way to mark this assignment is through `-p` and `-P` options:
         - **_qlt** -- question quality (*optional parameter*):
              * **-** if not to be used,
              * **+** if needs minor changes,
-             * **\*** if it's flawles;
+             * __*__ if it's flawles;
         - **_fdbck** -- text feedback;
         - **_diff** -- difficulty 1--5.
 8. When marking is finished (mark, feedback, difficulty and quality) use **-P** option to generate feedback (text and `csv` for FEN) and extracted indicated questions.
