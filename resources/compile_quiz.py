@@ -174,6 +174,9 @@ def parseQuestions(filename):
   # find the parent url
   url = quiz_text.get('url', '')
 
+  # -P find feedback
+  feedback = quiz_text.get('feedback', 'NO FEEDBACK GIVEN')
+
   # -P find mark
   mark = int(quiz_text.get('mark', '-1'))
   p_difficulty_count = [0, 0, 0, 0, 0]
@@ -466,7 +469,7 @@ def parseQuestions(filename):
 
     results.append(out)
 
-  return(results, title, url, uid, unique_sections, difficulty_count, used_sections, used_question_types, mark, p_difficulty_count)
+  return(results, title, url, uid, unique_sections, difficulty_count, used_sections, used_question_types, mark, p_difficulty_count, feedback)
 
 # return HTML image environment
 def insertImage(path, caption):
@@ -717,7 +720,7 @@ def updateIndex(dirname, jsonPath):
 #
 # generate feedback for given user
 #
-def toFeedback(rootDir, uid, results, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_difficulty_count):
+def toFeedback(rootDir, uid, results, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_difficulty_count, global_feedback):
   d = []
   for r in results:
     d.append('#' + str(r['number']).zfill(2) + ' -- feedback:            ' + r['fdbck'])
@@ -726,7 +729,7 @@ def toFeedback(rootDir, uid, results, sectionCoverage, difficulty, quantifiedSec
   d.sort()
 
   feedback = quizStats(uid, len(results), sectionCoverage, difficulty, quantifiedSections, questionTypes)
-  feedback += '\n\n' + 'Mark: %3d'%mark + '\n\n' + '\n'.join(d)
+  feedback += '\n\n' + 'Mark: %3d'%mark + '\n\n' + global_feedback + '\n\n' + '\n'.join(d)
 
   feedbackFile = os.path.join(rootDir,"feedback_"+'_'.join(uid)+".txt")
   with open(feedbackFile, 'w') as ffile:
@@ -1154,7 +1157,7 @@ if __name__ == '__main__':
     print ""
     for i in quizs:
       try:
-        results, title, url, uid, sectionCoverage, difficulty, quantifiedSections, questionTypes, _, _ = parseQuestions(os.path.join(special, i))
+        results, title, url, uid, sectionCoverage, difficulty, quantifiedSections, questionTypes, _, _, _ = parseQuestions(os.path.join(special, i))
         log.append("Compiling: %s" % os.path.join(special, i))
         print log[-1]
 
@@ -1206,17 +1209,17 @@ if __name__ == '__main__':
 
     csv_feedback = ["Student,Spam,Feedback"]
     for i in quizs:
-      results, title, url, uid, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_diff_count = parseQuestions(os.path.join(rootDir,os.path.basename(i)))
+      results, title, url, uid, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_diff_count, global_feedback = parseQuestions(os.path.join(rootDir,os.path.basename(i)))
       # Big-O ordering
       results = orderQuestions(os.path.join(rootDir,i), 'O', uid, results, False)
-      csv_feedback += toFeedback(os.path.join(rootDir,'feedback/'), uid, results, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_diff_count)
+      csv_feedback += toFeedback(os.path.join(rootDir,'feedback/'), uid, results, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_diff_count, global_feedback)
       # Extract all marked questions with graphics
       extract(rootDir, uid, results, True)
     with open(os.join.path(rootDir,'feedback.csv'), "w") as csv_file:
       csv_file.write("\n".join(csv_feedback))
     sys.exit(0)
 
-  results, title, url, uid, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_diff_count = parseQuestions(quizFilename)
+  results, title, url, uid, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_diff_count, global_feedback = parseQuestions(quizFilename)
 
   # order questions if needed
   if args.tarball:
@@ -1284,7 +1287,7 @@ if __name__ == '__main__':
 
   if args.feedback:
     print( "Generating feedback for " + ' & '.join(uid) )
-    toFeedback( rootDir, uid, results, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_diff_count )
+    toFeedback( rootDir, uid, results, sectionCoverage, difficulty, quantifiedSections, questionTypes, mark, p_diff_count, global_feedback)
   elif args.question:
     print( "Generating question #" + str(args.question[-1]) )
     toHtml(quizFilename, results, title, args.question)
