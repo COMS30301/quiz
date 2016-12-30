@@ -456,10 +456,14 @@ The easies way to mark this assignment is through `-p` and `-P` options:
 6 The questions there are orderd *by difficulty*.
 7. The marking should be inputed into `/path/to/QUIZ/special/*_^O.quiz` corresponding to currently viewed submission (this file has the same question order as the web page).
     * To input mark use global **mark** keyword;
+    * To input general feedback use global **feedback** keyword;
     * For each question use the keywords:
-        - **qlt** -- question quality (*optional parameter*): **-** if needs minor changes, **+** if it's flawles ;
-        - **fdbck** -- text feedback;
-        - **diff** -- difficulty 1--5.
+        - **_qlt** -- question quality (*optional parameter*):
+             * **-** if not to be used,
+             * **+** if needs minor changes,
+             * **\*** if it's flawles;
+        - **_fdbck** -- text feedback;
+        - **_diff** -- difficulty 1--5.
 8. When marking is finished (mark, feedback, difficulty and quality) use **-P** option to generate feedback (text and `csv` for FEN) and extracted indicated questions.
 
 ```
@@ -469,11 +473,12 @@ The easies way to mark this assignment is through `-p` and `-P` options:
   "title": "Quizk-quiz show-off.",
 
   "mark": "70",
+  "feedback": "Not so bad quiz.",
 
   "1": {
-    "qlt": "-",
-    "fdbck": "This is really dumb question",
-    "diff": "1",
+    "_qlt": "-",
+    "_fdbck": "This is really dumb question",
+    "_diff": "1",
   
     "difficulty": "1",
     "reference": "5.2",
@@ -509,8 +514,8 @@ The easies way to mark this assignment is through `-p` and `-P` options:
   },
 
   "2": {
-    "fdbck": "This question is extremely dumb",
-    "diff": "2",
+    "_fdbck": "This question is extremely dumb",
+    "_diff": "2",
   
     "difficulty": "5",
     "reference": "2.2",
