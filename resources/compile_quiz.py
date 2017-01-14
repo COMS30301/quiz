@@ -1269,12 +1269,16 @@ if __name__ == '__main__':
         f.write(i, '1to1/'+'_'.join(uid)+i[1:])
       f.write(quizFilename[:-5]+"_iFrame.html", '1to1/'+'_'.join(uid)+'/'+os.path.basename(quizFilename)[:-5]+"_iFrame.html")
       f.write(quizFilename, '1to1/'+'_'.join(uid)+'/'+os.path.basename(quizFilename))
-      for imfile in os.listdir(rootDir+'img'):
-        f.write(rootDir+'img/'+imfile, '1to1/'+'_'.join(uid)+'/img/'+imfile)
 
-      # copy images into img/uid/*
-      for imfile in os.listdir(rootDir+'img'):
-        f.write(rootDir+'img/'+imfile, 'img/'+'_'.join(uid)+'/'+imfile)
+      # Copy images
+      for root_im, _, files_im in os.walk(rootDir+'img'):
+        for imfile in files_im:
+          img = os.path.join(root_im, imfile)
+          img_rel = os.path.relpath(img, "img/")
+          f.write(img, '1to1/'+'_'.join(uid)+'/img/'+img_rel)
+          # copy images into img/uid/*
+          f.write(img, 'img/'+'_'.join(uid)+'/'+img_rel)
+
       # copy and rename .quiz - alter img paths
       f.write(quizFilename[:-5]+'_imgCdV', '_'.join(uid)+'.quiz')
 
